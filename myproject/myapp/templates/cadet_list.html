@@ -1,0 +1,321 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Список кадет{% endblock %}
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>Список кадет</title>
+    {% block styles %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/cadet_list.css' %}">
+    {% endblock %}
+    
+    <!-- Перемещаем скрипты в head с defer -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/js/all.min.js" defer></script>
+    <script src="{% static 'js/cadet_list.js' %}" defer></script>
+</head>
+
+<body>
+
+<!-- Обновляем форму поиска -->
+ 
+<h1 id="pageTitle">Список кадет</h1>
+
+<div class="search-container">
+    <div class="search-form">
+        <input type="text" 
+               name="q" 
+               placeholder="Поиск по ФИО..." 
+               value="{{ request.GET.q }}"
+               class="search-input"
+               oninput="liveSearch(this)"
+               >
+        <i class="fas fa-search search-icon"></i>
+    </div>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>ФИО</th>
+            <th class="grade-column">
+                Класс
+                <div class="grade-filter">
+                    <button class="grade-filter-btn">
+                        <i class="fas fa-filter"></i>
+                    </button>
+                    <div class="grade-filter-dropdown" style="display: none;">
+                        <div class="grade-filter-content">
+                            <div class="grade-search">
+                                <input type="text" placeholder="Поиск класса..." class="grade-search-input">
+                            </div>
+                            <div class="grade-list">
+                                <!-- Классы будут добавлены динамически -->
+                            </div>
+                            <div class="grade-actions">
+                                <button class="apply-filter">Применить</button>
+                                <button class="clear-filter">Сбросить</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </th>
+            <th>Дата рождения</th>
+            <th>Личные данные</th>
+            <th>Достижения</th>
+            <th>Выговоры</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for cadet in cadets %}
+        <tr class="cadet-row">
+            <td>{{ cadet.full_name }}</td>
+            <td>{{ cadet.grade|default:"Не указан" }}</td>
+            <td>{{ cadet.birth_date|custom_date }}</td>
+            <td class="personal-info">
+                <div class="docs-links">
+                    {% for doc in cadet.documents.all %}
+                        <a href="javascript:void(0)" 
+                           onclick="showDocument('{{ doc.doc_type }}', '{{ doc.file|b64encode }}')" 
+                           class="doc-link">
+                            <i class="fas fa-file-alt"></i>
+                            <span>
+                                {% if doc.doc_type == 'passport' %}
+                                    Паспорт
+                                {% elif doc.doc_type == 'registration' %}
+                                    Прописка
+                                {% elif doc.doc_type == 'snils' %}
+                                    СНИЛС
+                                {% elif doc.doc_type == 'medical' %}
+                                    Мед.полис
+                                {% endif %}
+                            </span>
+                        </a>
+                    {% empty %}
+                        <span class="doc-link disabled">
+                            <i class="fas fa-file-alt"></i>
+                            <span>Нет документов</span>
+                        </span>
+                    {% endfor %}
+                </div>
+            </td>
+            <td>{{ cadet.achievements }}</td>
+            <td>{{ cadet.reprimands }}</td>
+            <td class="actions">
+                <button class="edit-btn" onclick="window.openEditModal(this)" 
+                    data-id="{{ cadet.id }}"
+                    data-full_name="{{ cadet.full_name }}"
+                    data-grade="{{ cadet.grade }}"
+                    data-birth_date="{{ cadet.birth_date|date:'Y-m-d' }}"
+                    data-personal_info="{{ cadet.personal_info }}"
+                    data-achievements="{{ cadet.achievements }}"
+                    data-reprimands="{{ cadet.reprimands }}">
+                    <i class="fas fa-pencil-alt"></i>
+                </button>
+                <button class="delete-btn" onclick="window.openDeleteModal(this)" 
+                    data-id="{{ cadet.id }}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<button class="add-button" onclick="window.openAddModal()">+</button>
+
+<!-- Модальные окна -->
+<div class="modal" id="addModal">
+    <div class="modal-content">
+        <span class="close" onclick="closeAddModal()">&times;</span>
+        <h2>Добавить кадета</h2>
+        <form method="post" action="{% url 'add_cadet' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <label for="full_name">ФИО:</label>
+            <input type="text" id="full_name" name="full_name" required><br><br>
+
+            <label for="grade">Класс:</label>
+            <input type="text" id="grade" name="grade" placeholder="Например: 9А" maxlength="4"><br><br>
+
+            <label for="birth_date">Дата рождения:</label>
+            <input type="date" id="birth_date" name="birth_date" required><br><br>
+
+            <label for="achievements">Достижения:</label>
+            <textarea id="achievements" name="achievements"></textarea><br><br>
+
+            <label for="reprimands">Выговоры:</label>
+            <textarea id="reprimands" name="reprimands"></textarea><br><br>
+
+            <!-- Секция для документов -->
+            <div class="documents-section">
+                <h3>Документы</h3>
+                <div class="documents-grid">
+                    <div class="doc-preview" id="addPassportDoc">
+                        <h4>Паспорт</h4>
+                        <div class="preview-content"></div>
+                    </div>
+                    <div class="doc-preview" id="addRegistrationDoc">
+                        <h4>Прописка</h4>
+                        <div class="preview-content"></div>
+                    </div>
+                    <div class="doc-preview" id="addSnilsDoc">
+                        <h4>СНИЛС</h4>
+                        <div class="preview-content"></div>
+                    </div>
+                    <div class="doc-preview" id="addMedicalDoc">
+                        <h4>Мед.полис</h4>
+                        <div class="preview-content"></div>
+                    </div>
+                </div>
+                
+                <!-- Общая кнопка загрузки -->
+                <div class="upload-section">
+                    <input type="file" id="addDocUpload" accept="image/*" style="display:none" onchange="handleAddDocumentUpload(this)">
+                    <button type="button" class="main-upload-btn" onclick="document.getElementById('addDocUpload').click()">
+                        <i class="fas fa-upload"></i> Загрузить фото
+                    </button>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button type="submit">Добавить</button>
+                <button type="button" onclick="closeAddModal()">Отмена</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal" id="docUploadModal">
+    <div class="modal-content">
+        <div class="file-upload">
+            <input type="file" id="docUpload" accept="image/*" style="display:none">
+            <button type="button" onclick="document.getElementById('docUpload').click()" class="upload-btn">
+                <i class="fas fa-upload"></i> Загрузить документ
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="docTypeModal">
+    <div class="modal-content">
+        <span class="close" onclick="closeDocTypeModal()">&times;</span>
+        <h3>Выберите тип документа</h3>
+        <div class="doc-type-buttons">
+            <button onclick="assignDocument('passport')">
+                <i class="fas fa-id-card"></i> Паспорт
+            </button>
+            <button onclick="assignDocument('registration')">
+                <i class="fas fa-home"></i> Прописка
+            </button>
+            <button onclick="assignDocument('snils')">
+                <i class="fas fa-address-card"></i> СНИЛС
+            </button>
+            <button onclick="assignDocument('medical')">
+                <i class="fas fa-notes-medical"></i> Мед.полис
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="deleteModal">
+    <div class="modal-content">
+        <span class="close" onclick="closeDeleteModal()">&times;</span>
+        <h2>Удалить кадета?</h2>
+        <form method="post" id="deleteForm">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'cadet_list' %}">
+            <button type="submit" class="btn btn-danger">Да</button>
+            <button type="button" onclick="closeDeleteModal()" class="btn">Нет</button>
+        </form>
+    </div>
+</div>
+<div class="modal" id="editModal">
+    <div class="modal-content">
+        <span class="close" onclick="closeEditModal()">&times;</span>
+        <h2>Редактировать кадета</h2>
+        <form method="post" id="editForm" enctype="multipart/form-data">
+            {% csrf_token %}
+            <label for="editFullName">ФИО:</label>
+            <input type="text" id="editFullName" name="full_name" required><br><br>
+
+            <label for="editGrade">Класс:</label>
+            <input type="text" id="editGrade" name="grade" placeholder="Например: 9А" maxlength="4"><br><br>
+
+            <label for="editBirthDate">Дата рождения:</label>
+            <input type="date" id="editBirthDate" name="birth_date" required><br><br>
+
+            <label for="editAchievements">Достижения:</label>
+            <textarea id="editAchievements" name="achievements"></textarea><br><br>
+
+            <label for="editReprimands">Выговоры:</label>
+            <textarea id="editReprimands" name="reprimands"></textarea><br><br>
+
+            <!-- Секция для документов -->
+            <div class="documents-section">
+                <h3>Документы</h3>
+                <div class="documents-grid">
+                    <div class="doc-preview" id="passportDoc">
+                        <h4>Паспорт</h4>
+                        <div class="preview-content"></div>
+                        <div class="document-controls">
+                            <button type="button" class="remove-btn" onclick="removeDocument('passport')">
+                                <i class="fas fa-trash"></i> Удалить
+                            </button>
+                        </div>
+                    </div>
+                    <div class="doc-preview" id="registrationDoc">
+                        <h4>Прописка</h4>
+                        <div class="preview-content"></div>
+                        <div class="document-controls">
+                            <button type="button" class="remove-btn" onclick="removeDocument('registration')">
+                                <i class="fas fa-trash"></i> Удалить
+                            </button>
+                        </div>
+                    </div>
+                    <div class="doc-preview" id="snilsDoc">
+                        <h4>СНИЛС</h4>
+                        <div class="preview-content"></div>
+                        <div class="document-controls">
+                            <button type="button" class="remove-btn" onclick="removeDocument('snils')">
+                                <i class="fas fa-trash"></i> Удалить
+                            </button>
+                        </div>
+                    </div>
+                    <div class="doc-preview" id="medicalDoc">
+                        <h4>Мед.полис</h4>
+                        <div class="preview-content"></div>
+                        <div class="document-controls">
+                            <button type="button" class="remove-btn" onclick="removeDocument('medical')">
+                                <i class="fas fa-trash"></i> Удалить
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Общая кнопка загрузки -->
+                <div class="upload-section">
+                    <input type="file" id="docUpload" accept="image/*" style="display:none" onchange="handleDocumentUpload(this)">
+                    <button type="button" class="main-upload-btn" onclick="document.getElementById('docUpload').click()">
+                        <i class="fas fa-upload"></i> Загрузить фото
+                    </button>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button type="submit">Сохранить</button>
+                <button type="button" onclick="closeEditModal()">Отмена</button>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>
+{% endblock %}

@@ -1,0 +1,392 @@
+{% extends 'base.html' %}
+
+{% block head_scripts %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    // Функции для работы с пользователями
+    function editUser(userId, username, prefix, grades, tables) {
+        document.getElementById('editUserId').value = userId;
+        document.getElementById('editUsername').value = username;
+        document.getElementById('editPassword').value = '';
+        document.getElementById('editPrefix').value = prefix;
+        document.getElementById('editGrades').value = grades || '';
+        
+        // Очищаем чекбоксы перед установкой новых значений
+        document.getElementById('editViewCadets').checked = false;
+        document.getElementById('editViewEmployees').checked = false;
+        
+        // Устанавливаем чекбоксы таблиц
+        if (tables) {
+            const tablesList = tables.split(',');
+            document.getElementById('editViewCadets').checked = tablesList.includes('cadets');
+            document.getElementById('editViewEmployees').checked = tablesList.includes('employees');
+        }
+        
+        // Показываем/скрываем поля для обычного пользователя
+        toggleUserFields(prefix === 'user');
+        
+        const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
+        modal.show();
+    }
+
+    function deleteUser(userId, username) {
+        document.getElementById('deleteUserId').value = userId;
+        document.getElementById('deleteUsername').textContent = username;
+        const modal = new bootstrap.Modal(document.getElementById('deleteUserModal'));
+        modal.show();
+    }
+
+    function submitEditForm() {
+        const form = document.getElementById('editUserForm');
+        if (form.checkValidity()) {
+            form.submit();
+        } else {
+            form.reportValidity();
+        }
+    }
+
+    function submitDeleteForm() {
+        const form = document.getElementById('deleteUserForm');
+        form.submit();
+    }
+
+    function toggleUserFields(show) {
+        const userFields = document.querySelectorAll('.user-specific-fields');
+        userFields.forEach(field => {
+            field.style.display = show ? 'block' : 'none';
+        });
+    }
+
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            const toast = document.createElement('div');
+            toast.className = 'copy-toast';
+            toast.textContent = 'Логин скопирован';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        });
+    }
+
+    // Функция живого поиска
+    function performSearch(query) {
+        $.ajax({
+            url: '{% url "search_users" %}',
+            method: 'GET',
+            data: { q: query },
+            success: function(data) {
+                if (data.html) {
+                    document.querySelector('tbody').innerHTML = data.html;
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Ошибка при поиске:', error);
+            }
+        });
+    }
+
+    // Инициализация при загрузке страницы
+    document.addEventListener('DOMContentLoaded', function() {
+        // Обработчик изменения типа пользователя
+        const prefixSelect = document.getElementById('editPrefix');
+        if (prefixSelect) {
+            prefixSelect.addEventListener('change', function(e) {
+                toggleUserFields(e.target.value === 'user');
+            });
+        }
+
+        // Обработчик поиска
+        const searchInput = document.querySelector('.search-container input');
+        if (searchInput) {
+            let searchTimeout;
+            searchInput.addEventListener('input', function(e) {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    performSearch(this.value);
+                }, 300);
+            });
+        }
+    });
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Управление пользователями</h1>
+    
+    <div class="search-container mb-3">
+        <input type="text" 
+               class="form-control" 
+               placeholder="Поиск по имени пользователя...">
+    </div>
+
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Имя пользователя</th>
+                    <th>Тип</th>
+                    <th>Доступные классы</th>
+                    <th>Доступные таблицы</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% include 'user_list_rows.html' %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Модальное окно редактирования -->
+    <div class="modal fade" id="editUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Редактировать пользователя</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editUserForm" method="POST" action="{% url 'edit_user' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="user_id" id="editUserId">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Имя пользователя</label>
+                            <input type="text" class="form-control" name="username" id="editUsername" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Новый пароль (оставьте пустым, если не меняете)</label>
+                            <input type="password" class="form-control" name="password" id="editPassword">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Тип пользователя</label>
+                            <select class="form-control" name="prefix" id="editPrefix" onchange="toggleUserFields(this.value === 'user')">
+                                <option value="user">Пользователь</option>
+                                <option value="admin">Администратор</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3 user-specific-fields">
+                            <label class="form-label">Доступные классы (через запятую)</label>
+                            <input type="text" class="form-control" name="allowed_grades" id="editGrades" placeholder="Например: 9А, 10Б, 11В">
+                            <small class="form-text text-muted">Введите классы через запятую, например: 9А, 10Б, 11В</small>
+                        </div>
+                        
+                        <div class="mb-3 user-specific-fields">
+                            <label class="form-label">Доступные таблицы</label>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" name="can_view_cadets" id="editViewCadets">
+                                <label class="form-check-label">Кадеты</label>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" name="can_view_employees" id="editViewEmployees">
+                                <label class="form-check-label">Сотрудники</label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-primary" onclick="submitEditForm()">Сохранить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно удаления -->
+    <div class="modal fade" id="deleteUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Подтверждение удаления</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Вы действительно хотите удалить пользователя <span id="deleteUsername"></span>?</p>
+                    <form id="deleteUserForm" method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="user_id" id="deleteUserId">
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-danger" onclick="submitDeleteForm()">Удалить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .container-fluid {
+        max-width: 100%;
+        padding: 0 1rem;
+    }
+
+    .content-container {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        width: 100%;
+        margin: 0;
+    }
+
+    .table-responsive {
+        margin: -1rem;
+        width: calc(100% + 2rem);
+    }
+
+    .table {
+        margin-bottom: 0;
+        width: 100%;
+    }
+
+    .table th {
+        background-color: #f8f9fa;
+        color: #333;
+        font-weight: 600;
+        padding: 1rem;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .table td {
+        padding: 1rem;
+        vertical-align: middle;
+    }
+
+    .btn-icon {
+        padding: 0.3rem 0.5rem;
+        font-size: 0.875rem;
+        margin-right: 0.3rem;
+        line-height: 1;
+        border-radius: 4px;
+        background: transparent;
+        border: none;
+    }
+
+    .btn-icon i {
+        font-size: 14px;
+        color: #333;
+    }
+
+    .btn-icon.btn-primary i {
+        color: #333;
+    }
+
+    .btn-icon.btn-danger i {
+        color: #333;
+    }
+
+    .btn-icon:hover {
+        transform: translateY(-1px);
+        transition: transform 0.2s;
+        background: transparent;
+    }
+
+    .btn-icon.btn-primary:hover i {
+        color: #000;
+    }
+
+    .btn-icon.btn-danger:hover i {
+        color: #000;
+    }
+
+    .modal-content {
+        border-radius: 8px;
+    }
+
+    .modal-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        border-radius: 8px 8px 0 0;
+    }
+
+    .modal-footer {
+        background-color: #f8f9fa;
+        border-top: 1px solid #dee2e6;
+        border-radius: 0 0 8px 8px;
+    }
+
+    .form-label {
+        font-weight: 500;
+        color: #333;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-control {
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        padding: 0.5rem;
+    }
+
+    .form-control:focus {
+        border-color: #80bdff;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+    }
+
+    /* Стили для модальных окон */
+    .modal {
+        background: none !important;
+    }
+
+    .modal-backdrop {
+        display: none !important;
+    }
+
+    .modal-dialog {
+        margin: 2rem auto;
+        z-index: 1100;
+    }
+
+    .modal.show {
+        display: block;
+        background: none !important;
+    }
+
+    .username-copy {
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        transition: background-color 0.2s;
+    }
+
+    .username-copy:hover {
+        background-color: #f8f9fa;
+    }
+
+    .username-copy i {
+        font-size: 0.875rem;
+        color: #6c757d;
+        opacity: 0.5;
+    }
+
+    .username-copy:hover i {
+        opacity: 1;
+    }
+
+    .copy-toast {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: #333;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        z-index: 1100;
+        animation: fadeInOut 2s ease-in-out;
+    }
+
+    @keyframes fadeInOut {
+        0% { opacity: 0; transform: translateY(20px); }
+        10% { opacity: 1; transform: translateY(0); }
+        90% { opacity: 1; transform: translateY(0); }
+        100% { opacity: 0; transform: translateY(-20px); }
+    }
+</style>
+{% endblock %} 

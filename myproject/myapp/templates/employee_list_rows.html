@@ -1,0 +1,26 @@
+{% for employee in employees %}
+<tr class="employee-row">
+    <td>{{ employee.full_name }}</td>
+    <td>{{ employee.birth_date|date:"d E Y'г." }}</td>
+    <td>{{ employee.position }}</td>
+    <td>{{ employee.experience }}</td>
+    <td>{{ employee.education }}</td>
+    <td>{{ employee.achievements }}</td>
+    <td class="actions">
+        <button class="edit-btn" onclick="openEditModal(this)" 
+            data-id="{{ employee.id }}"
+            data-full_name="{{ employee.full_name }}"
+            data-birth_date="{{ employee.birth_date|date:'Y-m-d' }}"
+            data-position="{{ employee.position }}"
+            data-experience="{{ employee.experience }}"
+            data-education="{{ employee.education }}"
+            data-achievements="{{ employee.achievements }}">
+            <i class="fas fa-pencil-alt"></i>
+        </button>
+        <button class="delete-btn" onclick="openDeleteModal(this)" 
+            data-id="{{ employee.id }}">
+            <i class="fas fa-trash"></i>
+        </button>
+    </td>
+</tr>
+{% endfor %}

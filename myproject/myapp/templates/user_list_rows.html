@@ -1,0 +1,43 @@
+{% for user in users %}
+<tr>
+    <td>
+        <span class="username-copy" onclick="copyToClipboard('{{ user.username }}')" title="Нажмите, чтобы скопировать логин">
+            {{ user.username }}
+            <i class="fas fa-copy ms-2"></i>
+        </span>
+    </td>
+    <td>{{ user.profile.get_prefix_display }}</td>
+    <td>{{ user.profile.allowed_grades|default:"-" }}</td>
+    <td>
+        {% if user.profile.prefix == 'admin' %}
+            Все таблицы
+        {% else %}
+            {% with tables=user.profile.allowed_tables|default:"" %}
+                {% if tables and tables != "" %}
+                    {% if 'cadets' in tables and 'employees' in tables %}
+                        Кадеты, Сотрудники
+                    {% elif 'cadets' in tables %}
+                        Кадеты
+                    {% elif 'employees' in tables %}
+                        Сотрудники
+                    {% else %}
+                        Нет доступных таблиц
+                    {% endif %}
+                {% else %}
+                    Нет доступных таблиц
+                {% endif %}
+            {% endwith %}
+        {% endif %}
+    </td>
+    <td>
+        <button class="btn btn-icon btn-primary" onclick="editUser('{{ user.id }}', '{{ user.username }}', '{{ user.profile.prefix }}', '{{ user.profile.allowed_grades|default:'' }}', '{{ user.profile.allowed_tables|default:'' }}')" title="Редактировать">
+            <i class="fas fa-edit"></i>
+        </button>
+        {% if user.username != 'admin' %}
+        <button class="btn btn-icon btn-danger" onclick="deleteUser('{{ user.id }}', '{{ user.username }}')" title="Удалить">
+            <i class="fas fa-trash"></i>
+        </button>
+        {% endif %}
+    </td>
+</tr>
+{% endfor %} 

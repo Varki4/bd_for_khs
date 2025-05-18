@@ -1,0 +1,746 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% csrf_token %}
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>{% block title %}Система учета{% endblock %}</title>
+    <link rel="shortcut icon" type="image/png" href="{% static 'favicon.ico' %}"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/cadet_list.css' %}">
+    <style>
+        :root {
+            --primary-bg: #ffffff;
+            --secondary-bg: #f8f9fa;
+            --primary-text: #212529;
+            --secondary-text: #6c757d;
+            --border-color: #dee2e6;
+            --hover-bg: #e9ecef;
+            --modal-bg: #ffffff;
+            --notification-bg: #333333;
+            --notification-text: #ffffff;
+            --nav-active-bg: #007bff;
+            --nav-active-text: #ffffff;
+            --button-primary-bg: #007bff;
+            --button-primary-text: #ffffff;
+            --button-primary-hover: #0056b3;
+        }
+
+        [data-bs-theme="dark"] {
+            --primary-bg: #1e1e2d;
+            --secondary-bg: #2b2b3b;
+            --primary-text: #e1e1e6;
+            --secondary-text: #a9a9b8;
+            --border-color: #3f3f55;
+            --hover-bg: #32324a;
+            --modal-bg: #2b2b3b;
+            --notification-bg: #e1e1e6;
+            --notification-text: #1e1e2d;
+            --nav-active-bg: #3699ff;
+            --nav-active-text: #ffffff;
+            --button-primary-bg: #3699ff;
+            --button-primary-text: #ffffff;
+            --button-primary-hover: #187de4;
+        }
+
+        body {
+            background-color: var(--primary-bg);
+            color: var(--primary-text);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .navbar {
+            background-color: var(--secondary-bg);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .nav-link {
+            color: var(--primary-text);
+        }
+
+        .nav-link:hover {
+            color: var(--secondary-text);
+        }
+
+        .nav-link.active {
+            background-color: var(--nav-active-bg);
+            color: var(--nav-active-text);
+        }
+
+        .modal-content {
+            background-color: var(--modal-bg);
+            color: var(--primary-text);
+        }
+
+        .contact-item {
+            background-color: var(--primary-bg);
+            color: var(--primary-text);
+        }
+
+        .contact-item:hover {
+            background-color: var(--hover-bg);
+        }
+
+        .copy-notification {
+            background-color: var(--notification-bg);
+            color: var(--notification-text);
+        }
+
+        .theme-switch {
+            display: flex;
+            align-items: center;
+            margin-right: 15px;
+        }
+
+        .theme-switch-btn {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--primary-text);
+            cursor: pointer;
+            padding: 8px 12px;
+            font-size: 1.2rem;
+            transition: all 0.2s;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-switch-btn:hover {
+            background-color: var(--hover-bg);
+            transform: translateY(-1px);
+        }
+
+        .theme-switch-btn i {
+            font-size: 1.2rem;
+        }
+
+        .dark-icon, .light-icon {
+            transition: all 0.3s;
+        }
+
+        [data-bs-theme="dark"] .theme-switch-btn {
+            background-color: var(--secondary-bg);
+        }
+
+        [data-bs-theme="dark"] .theme-switch-btn:hover {
+            background-color: var(--hover-bg);
+        }
+
+        .fa-moon {
+            color: #6c757d;
+        }
+
+        .fa-sun {
+            color: #ffc107;
+        }
+
+        /* Обновляем стили для таблиц в тёмной теме */
+        [data-bs-theme="dark"] .table {
+            color: var(--primary-text);
+            border-color: var(--border-color);
+            background-color: var(--secondary-bg);
+        }
+
+        [data-bs-theme="dark"] .table th {
+            background-color: #2b2b3b;
+            color: var(--primary-text);
+            border-bottom: 2px solid #3f3f55;
+            font-weight: 500;
+        }
+
+        [data-bs-theme="dark"] .table td {
+            color: var(--primary-text);
+            border-color: var(--border-color);
+            background-color: var(--secondary-bg);
+        }
+
+        [data-bs-theme="dark"] .table-striped tbody tr:nth-of-type(odd) {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        [data-bs-theme="dark"] .table-hover tbody tr:hover {
+            background-color: var(--hover-bg);
+            transition: background-color 0.2s ease;
+        }
+
+        [data-bs-theme="dark"] .table-responsive {
+            background-color: var(--secondary-bg);
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+        }
+
+        [data-bs-theme="dark"] .content-container {
+            background-color: var(--secondary-bg);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+        }
+
+        [data-bs-theme="dark"] .table thead th {
+            padding: 15px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--border-color);
+            background-color: #2b2b3b;
+        }
+
+        [data-bs-theme="dark"] .table tbody td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        [data-bs-theme="dark"] .table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        [data-bs-theme="dark"] .table-hover tbody tr {
+            transition: all 0.2s ease;
+        }
+
+        [data-bs-theme="dark"] .table-hover tbody tr:hover {
+            background-color: var(--hover-bg);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Общие стили */
+        .nav-tabs {
+            margin-bottom: 20px;
+            border-bottom: 1px solid #dee2e6;
+            padding: 0;
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 20px;
+        }
+
+        .nav-link {
+            padding: 10px 20px;
+            margin-right: 10px;
+            text-decoration: none;
+            color: #495057;
+            background-color: #f8f9fa;
+            border-radius: 4px 4px 0 0;
+            font-size: 16px;
+        }
+
+        .nav-link.active {
+            background-color: #007bff;
+            color: white;
+            border-bottom: 2px solid #0056b3;
+        }
+
+        .add-button {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            border: none;
+            padding: 15px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 1000;
+        }
+
+        .nav-left, .nav-right {
+            display: flex;
+            align-items: center;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 5px;
+            margin-left: 10px;
+        }
+
+        .btn-group .nav-button {
+            margin: 0;
+        }
+
+        .btn-group .nav-button {
+            background-color: var(--button-primary-bg);
+            color: var(--button-primary-text);
+        }
+
+        .btn-group .nav-button:hover {
+            background-color: var(--button-primary-hover);
+            color: var(--button-primary-text);
+        }
+
+        .logout-btn {
+            padding: 8px 15px;
+            background-color: #dc3545;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .logout-btn:hover {
+            background-color: #c82333;
+        }
+
+        @media screen and (max-width: 600px) {
+            .logout-btn span {
+                display: none;
+            }
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .nav-button {
+            padding: 0.5rem 1rem;
+            margin: 0 0.5rem;
+            background-color: var(--button-primary-bg);
+            color: var(--button-primary-text);
+            text-decoration: none;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .nav-button:hover {
+            background-color: var(--button-primary-hover);
+            color: var(--button-primary-text);
+        }
+        
+        .messages {
+            margin: 1rem;
+        }
+        
+        .message {
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 4px;
+        }
+        
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Общие стили для таблиц */
+        .container {
+            max-width: 100% !important;
+            padding: 1rem !important;
+        }
+
+        .content-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            width: 100%;
+            margin: 0;
+        }
+
+        .table-responsive {
+            margin: -1rem;
+            width: calc(100% + 2rem);
+        }
+
+        .table {
+            margin-bottom: 0;
+            width: 100%;
+        }
+
+        /* Стили для модального окна */
+        .modal-backdrop {
+            display: none !important;
+        }
+
+        .modal {
+            background: none !important;
+        }
+
+        .modal-dialog {
+            margin: 2rem auto;
+            z-index: 1100;
+        }
+
+        .modal.show {
+            display: block;
+            background: none !important;
+        }
+
+        .modal-content {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+
+        .contact-item {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .contact-item i {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+
+        .contact-item:hover i {
+            color: #0d6efd;
+        }
+
+        .edit-support-btn {
+            padding: 0.25rem 0.5rem;
+            color: #6c757d;
+            margin-right: 10px;
+        }
+
+        .edit-support-btn:hover {
+            color: #0d6efd;
+        }
+
+        /* Обновляем стили для навигации */
+        .nav-link.active {
+            background-color: var(--nav-active-bg);
+            color: var(--nav-active-text);
+        }
+
+        /* Обновляем стили для кнопок */
+        .nav-button {
+            background-color: var(--button-primary-bg);
+            color: var(--button-primary-text);
+        }
+
+        .nav-button:hover {
+            background-color: var(--button-primary-hover);
+            color: var(--button-primary-text);
+        }
+
+        /* Обновляем стили для таблиц */
+        [data-bs-theme="dark"] .table {
+            color: var(--primary-text);
+            border-color: var(--border-color);
+        }
+
+        [data-bs-theme="dark"] .table th {
+            background-color: #2b2b3b;
+            color: var(--primary-text);
+            border-bottom: 2px solid #3f3f55;
+        }
+
+        [data-bs-theme="dark"] .table td {
+            color: var(--primary-text);
+            border-color: var(--border-color);
+        }
+
+        [data-bs-theme="dark"] .table-striped tbody tr:nth-of-type(odd) {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        [data-bs-theme="dark"] .table-hover tbody tr:hover {
+            background-color: var(--hover-bg);
+        }
+
+        /* Обновляем стили для контейнеров */
+        [data-bs-theme="dark"] .content-container {
+            background-color: var(--secondary-bg);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Обновляем стили для модальных окон */
+        [data-bs-theme="dark"] .modal-content {
+            background-color: var(--modal-bg);
+            border-color: var(--border-color);
+        }
+
+        [data-bs-theme="dark"] .modal-header {
+            border-bottom-color: var(--border-color);
+        }
+
+        [data-bs-theme="dark"] .modal-footer {
+            border-top-color: var(--border-color);
+        }
+
+        /* Обновляем стили для форм */
+        [data-bs-theme="dark"] .form-control {
+            background-color: var(--primary-bg);
+            border-color: var(--border-color);
+            color: var(--primary-text);
+        }
+
+        [data-bs-theme="dark"] .form-control:focus {
+            background-color: var(--primary-bg);
+            border-color: #3699ff;
+            box-shadow: 0 0 0 0.2rem rgba(54, 153, 255, 0.15);
+        }
+
+        /* Обновляем стили для переключателя темы */
+        .theme-switch-btn {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--primary-text);
+        }
+
+        .theme-switch-btn:hover {
+            background-color: var(--hover-bg);
+        }
+
+        [data-bs-theme="dark"] .fa-moon {
+            color: #b3b3b3;
+        }
+
+        [data-bs-theme="dark"] .fa-sun {
+            color: #ffd700;
+        }
+
+        /* Обновляем стили для сообщений */
+        [data-bs-theme="dark"] .message.success {
+            background-color: rgba(54, 153, 255, 0.1);
+            color: #3699ff;
+            border: 1px solid rgba(54, 153, 255, 0.2);
+        }
+
+        [data-bs-theme="dark"] .message.error {
+            background-color: rgba(246, 78, 96, 0.1);
+            color: #f64e60;
+            border: 1px solid rgba(246, 78, 96, 0.2);
+        }
+
+        /* Добавляем плавные переходы */
+        .navbar,
+        .modal-content,
+        .content-container,
+        .table,
+        .form-control {
+            transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+    </style>
+    {% block extra_styles %}{% endblock %}
+    {% block extra_css %}{% endblock %}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block head_scripts %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-left">
+            {% if user.is_authenticated %}
+                {% if user.profile.is_admin %}
+                    <a href="{% url 'cadet_list' %}" class="nav-link {% if request.resolver_match.url_name == 'cadet_list' %}active{% endif %}">
+                        Кадеты
+                    </a>
+                    <a href="{% url 'employee_list' %}" class="nav-link {% if request.resolver_match.url_name == 'employee_list' %}active{% endif %}">
+                        Сотрудники 
+                    </a>
+                    <div class="btn-group">
+                        <a href="{% url 'create_user' %}" class="nav-button">Создать пользователя</a>
+                        <a href="{% url 'user_list' %}" class="nav-button">Список пользователей</a>
+                    </div>
+                {% else %}
+                    {% with tables=user.profile.allowed_tables|default:"" %}
+                        {% if 'cadets' in tables %}
+                            <a href="{% url 'cadet_list' %}" class="nav-link {% if request.resolver_match.url_name == 'cadet_list' %}active{% endif %}">
+                                Кадеты
+                            </a>
+                        {% endif %}
+                        {% if 'employees' in tables %}
+                            <a href="{% url 'employee_list' %}" class="nav-link {% if request.resolver_match.url_name == 'employee_list' %}active{% endif %}">
+                                Сотрудники 
+                            </a>
+                        {% endif %}
+                    {% endwith %}
+                {% endif %}
+            {% endif %}
+        </div>
+        <div class="nav-right">
+            {% if user.is_authenticated %}
+                <button class="nav-button support-btn" onclick="openSupportModal()">
+                    <i class="fas fa-question-circle"></i> Поддержка
+                </button>
+                <form method="post" action="{% url 'logout' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="nav-button">Выход</button>
+                </form>
+            {% endif %}
+        </div>
+    </nav>
+
+    <!-- Модальное окно поддержки -->
+    <div class="modal fade" id="supportModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Поддержка</h5>
+                    {% if user.is_authenticated and user.profile.is_admin %}
+                        <button class="btn btn-link edit-support-btn" onclick="toggleSupportEdit()">
+                            <i class="fas fa-pencil-alt"></i>
+                        </button>
+                    {% endif %}
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Форма редактирования (скрыта по умолчанию) -->
+                    {% if user.is_authenticated and user.profile.is_admin %}
+                        <form id="supportInfoForm" method="POST" action="{% url 'update_support_info' %}" style="display: none;">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="form-label">Email поддержки:</label>
+                                <input type="email" class="form-control" name="support_email" value="{{ support_info.email }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Telegram поддержки:</label>
+                                <input type="text" class="form-control" name="support_telegram" value="{{ support_info.telegram }}">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Сохранить</button>
+                            <button type="button" class="btn btn-secondary" onclick="toggleSupportEdit()">Отмена</button>
+                        </form>
+                    {% endif %}
+
+                    <!-- Информация для просмотра -->
+                    <div id="supportInfo" class="support-info">
+                        <div class="contact-item" onclick="copyToClipboard('{{ support_info.email }}', 'Email скопирован')">
+                            <strong>Email:</strong> 
+                            <span class="copyable">{{ support_info.email }}</span>
+                            <i class="fas fa-copy ms-2"></i>
+                        </div>
+                        <div class="contact-item" onclick="copyToClipboard('{{ support_info.telegram }}', 'Telegram скопирован')">
+                            <strong>Telegram:</strong> 
+                            <span class="copyable">{{ support_info.telegram }}</span>
+                            <i class="fas fa-copy ms-2"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <div class="message {% if message.tags %}{{ message.tags }}{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        
+        {% block content %}{% endblock %}
+    </div>
+
+    {% block scripts %}
+    <script>
+        function copyToClipboard(text, message) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Показываем уведомление
+                const notification = document.createElement('div');
+                notification.className = 'copy-notification';
+                notification.textContent = message;
+                document.body.appendChild(notification);
+                
+                // Удаляем уведомление через 2 секунды
+                setTimeout(() => {
+                    notification.remove();
+                }, 2000);
+            });
+        }
+
+        function toggleSupportEdit() {
+            const form = document.getElementById('supportInfoForm');
+            const info = document.getElementById('supportInfo');
+            
+            if (form.style.display === 'none') {
+                form.style.display = 'block';
+                info.style.display = 'none';
+            } else {
+                form.style.display = 'none';
+                info.style.display = 'block';
+            }
+        }
+
+        // Добавляем функцию открытия модального окна поддержки
+        function openSupportModal() {
+            const supportModal = new bootstrap.Modal(document.getElementById('supportModal'));
+            // Убеждаемся, что форма скрыта, а информация отображается при открытии
+            const form = document.getElementById('supportInfoForm');
+            const info = document.getElementById('supportInfo');
+            if (form) form.style.display = 'none';
+            if (info) info.style.display = 'block';
+            supportModal.show();
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Обработка закрытия вкладки/окна
+        window.addEventListener('beforeunload', function(e) {
+            const csrfToken = getCookie('csrftoken');
+            // Отправка запроса на выход с CSRF токеном
+            navigator.sendBeacon("{% url 'logout' %}", new URLSearchParams({
+                'csrfmiddlewaretoken': csrfToken
+            }));
+        });
+
+        // Обработка потери видимости вкладки
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'hidden') {
+                const csrfToken = getCookie('csrftoken');
+                navigator.sendBeacon("{% url 'logout' %}", new URLSearchParams({
+                    'csrfmiddlewaretoken': csrfToken
+                }));
+            }
+        });
+
+        // Добавляем функцию для живого поиска
+        function liveSearch(input, url) {
+            const searchQuery = input.value.trim();
+            const csrfToken = getCookie('csrftoken');
+            
+            fetch(`${url}?q=${encodeURIComponent(searchQuery)}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrfToken
+                }
+            })
+            .then(response => response.text())
+            .then(html => {
+                const tableBody = document.querySelector('tbody');
+                tableBody.innerHTML = html;
+            });
+        }
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            document.documentElement.setAttribute('data-bs-theme', 'light');
+        });
+    </script>
+    {% endblock %}
+</body>
+</html>

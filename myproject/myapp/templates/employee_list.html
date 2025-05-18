@@ -1,0 +1,569 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Список сотрудников{% endblock %}
+
+{% block extra_css %}
+<style>
+    .search-icon {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #666;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        justify-content: center;
+        align-items: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        padding: 20px;
+        overflow-y: auto;
+    }
+
+    .modal.show {
+        opacity: 1;
+    }
+
+    .modal-content {
+        background-color: #ffffff;
+        padding: 30px;
+        border-radius: 8px;
+        position: relative;
+        width: 90%;
+        max-width: 500px;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        transform: scale(0.7);
+        transition: transform 0.3s ease;
+        margin: 20px auto;
+        scrollbar-width: thin;
+        scrollbar-color: #90A4AE #CFD8DC;
+    }
+
+    .modal-content::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .modal-content::-webkit-scrollbar-track {
+        background: #CFD8DC;
+    }
+
+    .modal-content::-webkit-scrollbar-thumb {
+        background-color: #90A4AE;
+        border-radius: 4px;
+    }
+
+    .modal.show .modal-content {
+        transform: scale(1);
+    }
+
+    .modal h2 {
+        margin: 0 0 20px 0;
+        color: #2c3e50;
+        font-size: 24px;
+        font-weight: 500;
+    }
+
+    .close {
+        position: absolute;
+        right: 15px;
+        top: 15px;
+        font-size: 28px;
+        font-weight: normal;
+        color: #666;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+
+    .close:hover {
+        color: #dc3545;
+    }
+
+    .modal form {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .modal label {
+        color: #4a5568;
+        font-weight: 500;
+        margin-bottom: 2px;
+        display: block;
+    }
+
+    .modal input[type="text"],
+    .modal input[type="date"],
+    .modal textarea {
+        width: 100%;
+        padding: 6px 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .modal input[type="text"]:focus,
+    .modal input[type="date"]:focus,
+    .modal textarea:focus {
+        border-color: #4299e1;
+        box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        outline: none;
+    }
+
+    .modal textarea {
+        min-height: 60px;
+        max-height: 150px;
+        resize: vertical;
+    }
+
+    .modal button {
+        padding: 10px 20px;
+        border-radius: 4px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .modal button[type="submit"] {
+        background-color: #4299e1;
+        color: white;
+        border: none;
+    }
+
+    .modal button[type="submit"]:hover {
+        background-color: #3182ce;
+    }
+
+    .modal button[type="button"] {
+        background-color: #e2e8f0;
+        color: #4a5568;
+        border: none;
+    }
+
+    .modal button[type="button"]:hover {
+        background-color: #cbd5e0;
+    }
+
+    .modal .btn-danger {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .modal .btn-danger:hover {
+        background-color: #c82333;
+    }
+
+    .modal .button-group {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 20px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+
+    th, td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+
+    th {
+        background-color: #f5f5f5;
+    }
+
+    .actions {
+        width: 100px;
+        text-align: center;
+    }
+
+    .edit-btn, .delete-btn {
+        border: none;
+        background: none;
+        cursor: pointer;
+        padding: 5px;
+    }
+
+    .edit-btn:hover {
+        color: #007bff;
+    }
+
+    .delete-btn:hover {
+        color: #dc3545;
+    }
+
+    .add-button {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    .add-button:hover {
+        background-color: #0056b3;
+    }
+
+    .tab-btn {
+        padding: 10px 20px;
+        border: none;
+        background-color: #f8f9fa;
+        cursor: pointer;
+        margin-right: 5px;
+        border-radius: 5px 5px 0 0;
+        text-decoration: none;
+        color: black;
+    }
+
+    .tab-btn.active {
+        background-color: #007bff;
+        color: white;
+        border-bottom: 2px solid #0056b3;
+    }
+
+    .tab-btn:hover {
+        background-color: #e9ecef;
+    }
+
+    .tab-btn.active:hover {
+        background-color: #0056b3;
+    }
+
+    @media screen and (max-width: 600px) {
+        .modal-content {
+            width: 95%;
+            padding: 20px;
+            margin: 10px;
+        }
+
+        .modal {
+            padding: 10px;
+        }
+
+        .modal button {
+            padding: 8px 16px;
+        }
+    }
+
+    .search-container {
+        margin: 20px 0;
+    }
+    
+    .search-form {
+        display: flex;
+        max-width: 500px;
+        gap: 10px;
+        position: relative;
+    }
+    
+    .search-input {
+        flex: 1;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    
+    .search-button {
+        padding: 8px 15px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    
+    .search-button:hover {
+        background-color: #0056b3;
+    }
+
+    .search-icon {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #666;
+    }
+
+    .copy-notification {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: #333;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 4px;
+        display: none;
+        animation: fadeInOut 2s ease-in-out;
+    }
+
+    @keyframes fadeInOut {
+        0% { opacity: 0; transform: translateY(20px); }
+        15% { opacity: 1; transform: translateY(0); }
+        85% { opacity: 1; transform: translateY(0); }
+        100% { opacity: 0; transform: translateY(-20px); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 id="pageTitle">Список сотрудников</h1>
+
+    <!-- Форма поиска для сотрудников -->
+    <div class="search-container">
+        <div class="search-form">
+            <input type="text" 
+                   name="q" 
+                   placeholder="Поиск по ФИО..." 
+                   value="{{ request.GET.q }}"
+                   class="search-input"
+                   oninput="liveSearch(this)"
+                   >
+            <i class="fas fa-search search-icon"></i>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ФИО</th>
+                    <th>Дата рождения</th>
+                    <th>Должность</th>
+                    <th>Опыт работы</th>
+                    <th>Образование</th>
+                    <th>Достижения</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for employee in employees %}
+                <tr class="employee-row">
+                    <td>{{ employee.full_name }}</td>
+                    <td>{{ employee.birth_date|custom_date }}</td>
+                    <td>{{ employee.position }}</td>
+                    <td>{{ employee.experience }}</td>
+                    <td>{{ employee.education }}</td>
+                    <td>{{ employee.achievements }}</td>
+                    <td class="actions">
+                        <button class="edit-btn" onclick="openEditModal(this)" 
+                            data-id="{{ employee.id }}"
+                            data-full_name="{{ employee.full_name }}"
+                            data-birth_date="{{ employee.birth_date|date:'Y-m-d' }}"
+                            data-position="{{ employee.position }}"
+                            data-experience="{{ employee.experience }}"
+                            data-education="{{ employee.education }}"
+                            data-achievements="{{ employee.achievements }}">
+                            <i class="fas fa-pencil-alt"></i>
+                        </button>
+                        <button class="delete-btn" onclick="openDeleteModal(this)" 
+                            data-id="{{ employee.id }}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <button class="add-button" onclick="openAddModal()">+</button>
+
+    <!-- Модальные окна -->
+    <div class="modal" id="addModal">
+        <div class="modal-content">
+            <span class="close" onclick="closeAddModal()">&times;</span>
+            <h2>Добавить сотрудника</h2>
+            <form method="post" action="{% url 'add_employee' %}">
+                {% csrf_token %}
+                <label for="full_name">ФИО:</label>
+                <input type="text" id="full_name" name="full_name" required><br><br>
+
+                <label for="birth_date">Дата рождения:</label>
+                <input type="date" id="birth_date" name="birth_date" required><br><br>
+
+                <label for="position">Должность:</label>
+                <input type="text" id="position" name="position" required><br><br>
+
+                <label for="experience">Опыт работы:</label>
+                <textarea id="experience" name="experience" required></textarea><br><br>
+
+                <label for="education">Образование:</label>
+                <textarea id="education" name="education" required></textarea><br><br>
+
+                <label for="achievements">Достижения:</label>
+                <textarea id="achievements" name="achievements" required></textarea><br><br>
+
+                <input type="hidden" name="next" value="{% url 'employee_list' %}">
+
+                <button type="submit">Добавить</button>
+                <button type="button" onclick="closeAddModal()">Отмена</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditModal()">&times;</span>
+            <h2>Редактировать сотрудника</h2>
+            <form method="post" id="editForm">
+                {% csrf_token %}
+                <label for="editFullName">ФИО:</label>
+                <input type="text" id="editFullName" name="full_name" required><br><br>
+
+                <label for="editBirthDate">Дата рождения:</label>
+                <input type="date" id="editBirthDate" name="birth_date" required><br><br>
+
+                <label for="editPosition">Должность:</label>
+                <input type="text" id="editPosition" name="position" required><br><br>
+
+                <label for="editExperience">Опыт работы:</label>
+                <textarea id="editExperience" name="experience" required></textarea><br><br>
+
+                <label for="editEducation">Образование:</label>
+                <textarea id="editEducation" name="education" required></textarea><br><br>
+
+                <label for="editAchievements">Достижения:</label>
+                <textarea id="editAchievements" name="achievements" required></textarea><br><br>
+
+                <input type="hidden" name="next" value="{% url 'employee_list' %}">
+
+                <button type="submit">Сохранить</button>
+                <button type="button" onclick="closeEditModal()">Отмена</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="deleteModal">
+        <div class="modal-content">
+            <span class="close" onclick="closeDeleteModal()">&times;</span>
+            <h2>Удалить сотрудника?</h2>
+            <form method="post" id="deleteForm">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{% url 'employee_list' %}">
+                <button type="submit" class="btn btn-danger">Да</button>
+                <button type="button" onclick="closeDeleteModal()" class="btn">Нет</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="copyNotification" class="copy-notification">
+        Скопировано в буфер обмена
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+function openAddModal() {
+    const modal = document.getElementById("addModal");
+    modal.style.display = "flex";
+    setTimeout(() => modal.classList.add("show"), 10);
+}
+
+function closeAddModal() {
+    const modal = document.getElementById("addModal");
+    modal.classList.remove("show");
+    setTimeout(() => modal.style.display = "none", 300);
+}
+
+function openEditModal(button) {
+    const id = button.getAttribute('data-id');
+    const fullName = button.getAttribute('data-full_name');
+    const birthDate = button.getAttribute('data-birth_date');
+    const position = button.getAttribute('data-position');
+    const experience = button.getAttribute('data-experience');
+    const education = button.getAttribute('data-education');
+    const achievements = button.getAttribute('data-achievements');
+
+    document.getElementById("editFullName").value = fullName;
+    document.getElementById("editBirthDate").value = birthDate;
+    document.getElementById("editPosition").value = position;
+    document.getElementById("editExperience").value = experience;
+    document.getElementById("editEducation").value = education;
+    document.getElementById("editAchievements").value = achievements;
+
+    document.getElementById("editForm").action = `/edit-employee/${id}/?next={% url 'employee_list' %}`;
+    const modal = document.getElementById("editModal");
+    modal.style.display = "flex";
+    setTimeout(() => modal.classList.add("show"), 10);
+}
+
+function closeEditModal() {
+    const modal = document.getElementById("editModal");
+    modal.classList.remove("show");
+    setTimeout(() => modal.style.display = "none", 300);
+}
+
+function openDeleteModal(button) {
+    const id = button.getAttribute('data-id');
+    document.getElementById("deleteForm").action = `/delete-employee/${id}/?next={% url 'employee_list' %}`;
+    const modal = document.getElementById("deleteModal");
+    modal.style.display = "flex";
+    setTimeout(() => modal.classList.add("show"), 10);
+}
+
+function closeDeleteModal() {
+    const modal = document.getElementById("deleteModal");
+    modal.classList.remove("show");
+    setTimeout(() => modal.style.display = "none", 300);
+}
+
+function liveSearch(input) {
+    const searchQuery = input.value.trim();
+    const url = "{% url 'employee_list' %}";
+    
+    fetch(`${url}?q=${encodeURIComponent(searchQuery)}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.text())
+    .then(html => {
+        const tableBody = document.querySelector('tbody');
+        tableBody.innerHTML = html;
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+window.onclick = function(event) {
+    const modals = [
+        document.getElementById('addModal'),
+        document.getElementById('editModal'),
+        document.getElementById('deleteModal')
+    ];
+
+    modals.forEach(modal => {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+};
+</script>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% load custom_filters %}
+{% for cadet in cadets %}
+<tr class="cadet-row">
+    <td>{{ cadet.full_name }}</td>
+    <td>{{ cadet.grade|default:"Не указан" }}</td>
+    <td>{{ cadet.birth_date|custom_date }}</td>
+    <td class="personal-info">
+        <div class="docs-links">
+            {% for doc in cadet.documents.all %}
+                <a href="javascript:void(0)" 
+                   class="doc-link"
+                   onclick="loadDocument('{{ cadet.id }}', '{{ doc.doc_type }}')"
+                   title="Открыть документ">
+                    <i class="fas fa-file-alt"></i>
+                    <span>
+                        {% if doc.doc_type == 'passport' %}
+                            Паспорт
+                        {% elif doc.doc_type == 'registration' %}
+                            Прописка
+                        {% elif doc.doc_type == 'snils' %}
+                            СНИЛС
+                        {% elif doc.doc_type == 'medical' %}
+                            Мед.полис
+                        {% endif %}
+                    </span>
+                </a>
+            {% empty %}
+                <span class="doc-link disabled">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Нет документов</span>
+                </span>
+            {% endfor %}
+        </div>
+    </td>
+    <td>{{ cadet.achievements }}</td>
+    <td>{{ cadet.reprimands }}</td>
+    <td class="actions">
+        <button class="edit-btn" onclick="window.openEditModal(this)" 
+            data-id="{{ cadet.id }}"
+            data-full_name="{{ cadet.full_name }}"
+            data-grade="{{ cadet.grade }}"
+            data-birth_date="{{ cadet.birth_date|date:'Y-m-d' }}"
+            data-personal_info="{{ cadet.personal_info }}"
+            data-achievements="{{ cadet.achievements }}"
+            data-reprimands="{{ cadet.reprimands }}">
+            <i class="fas fa-pencil-alt"></i>
+        </button>
+        <button class="delete-btn" onclick="window.openDeleteModal(this)" 
+            data-id="{{ cadet.id }}">
+            <i class="fas fa-trash"></i>
+        </button>
+    </td>
+</tr>
+{% endfor %}
